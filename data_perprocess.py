@@ -18,20 +18,7 @@ def data_preprocessing(data: pd.DataFrame) -> pd.DataFrame:
     def add_space(sentence: str) -> str:
         obj = str()
         for i, char in enumerate(sentence):
-            if char in [
-                ",",
-                ".",
-                "?",
-                "!",
-                ":",
-                ";",
-                "'",
-                '"',
-                "(",
-                ")",
-                "¡",
-                "¿",
-            ]:
+            if char in [",", ".", "?", "!", ":", ";", "'", '"', "(", ")", "¡", "¿"]:
                 if i == 0:
                     obj += char + " "
                 elif i == len(sentence) - 1:
@@ -56,7 +43,7 @@ def data_preprocessing(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def tokenlize(data: pd.DataFrame) -> tuple:
+def tokenlize(data: pd.DataFrame) -> tuple[list[list[str]], list[list[str]]]:
     """
     para: data: pd.DataFrame, the data should contain two column, English and
         Spanish
@@ -73,8 +60,10 @@ def tokenlize(data: pd.DataFrame) -> tuple:
 
 
 def vocablize(
-    data: list[list], min_freq=2, reserved_tokens=["<pad>", "<bos>", "<eos>", "<unk>"]
-) -> tuple:
+    data: list[list[str]],
+    min_freq=2,
+    reserved_tokens=["<pad>", "<bos>", "<eos>", "<unk>"],
+) -> tuple[dict[str, int], dict[int, str]]:
     """
     para: data: list[list], the element of the list is the tokenlized sentence
         min_freq: int, the minimum frequency of the word, if the frequency of
@@ -111,10 +100,52 @@ def string2idx(data: list[list], word2idx: dict) -> np.ndarray:
 
     this function is used to convert the sentence to the index
     """
-    sentence_len = [max([len(sentence) for sentence in data])]
+    sentence_len = max([len(sentence) for sentence in data])
     sentence_num = len(data)
     result = np.zeros((sentence_num, sentence_len), dtype=np.int64)
     for i, sentence in enumerate(data):
         for j, word in enumerate(sentence):
             result[i, j] = word2idx.get(word, word2idx["<unk>"])
     return result
+
+
+def idx2string(data: np.ndarray, idx2word: dict) -> str:
+    """
+    para: data: list[list], the element of the list is the tokenlized sentence
+        idx2word: dict, the key is the index of the word, the value is the word
+    return: list[list], the element of the list is the tokenlized sentence
+
+    this function is used to convert the index to the sentence
+    """
+    result = str()
+    for idx in data:
+        if idx2word[idx] == "<pad>":
+            break
+        result += idx2word.get(idx, "<unk>")
+        result += " "
+    return result[:-1]
+
+
+def save_data(
+    data: list[np.ndarray],
+    word2idx: list[dict[str, int]],
+    idx2word: list[dict[int, str]],
+    path: str,
+) -> None:
+    """
+    para: word2idx: dict, the key is the word, the value is the index of the word
+        idx2word: dict, the key is the index of the word, the value is the word
+        path: str, the path to save the vocab
+    return: None
+
+    this function is used to save the vocab
+    """
+    np.savez_compressed(
+        path,
+        Eng_data=data[0],
+        Spa_data=data[1],
+        Eng_word2idx=word2idx[0],
+        Spa_word2idx=word2idx[1],
+        Eng_idx2word=idx2word[0],
+        Spa_idx2word=idx2word[1],
+    )
